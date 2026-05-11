@@ -88,6 +88,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:3px;backgroun
 .leg-i{display:flex;align-items:center;gap:6px;font-size:0.62rem;color:var(--dim);cursor:pointer;user-select:none;transition:opacity 0.2s}
 .leg-i:hover{color:var(--text-2)}
 .leg-i.off{opacity:0.22}
+.leg-btn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:7px;font-family:var(--sans);font-size:0.62rem;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap}
 .leg-s{width:14px;height:3px;border-radius:2px}
 
 /* ═══ FILTER TABS ═══ */
@@ -302,7 +303,7 @@ function renderCards(){
 
 /* ═══ CHART ═══ */
 function setW(d,btn){winD=d;document.querySelectorAll('.wtabs .wt').forEach(t=>t.classList.remove('on'));btn.classList.add('on');renderChart()}
-function togLine(k){if(hid.has(k))hid.delete(k);else hid.add(k);renderChart();document.querySelectorAll('.leg-i').forEach(el=>{el.classList.toggle('off',hid.has(el.dataset.key))})}
+function togLine(k){if(hid.has(k))hid.delete(k);else hid.add(k);renderChart()}
 
 /* Aggregate daily rows into buckets: 'day','week','month' */
 function aggregate(rows, mode){
@@ -362,7 +363,16 @@ function renderChart(){
       y:{min:0,max:100,grid:{color:'rgba(232,234,239,0.5)'},ticks:{color:'#9498ad',font:{size:10,family:'JetBrains Mono'}}}}
   }});
   const leg=document.getElementById('chart-legend');leg.innerHTML='';
-  CATS.forEach(cat=>{const el=document.createElement('div');el.className=`leg-i${hid.has(cat.key)?' off':''}`;el.dataset.key=cat.key;el.innerHTML=`<span class="leg-s" style="background:${cat.hex}"></span>${cat.icon} ${cat.key}`;el.onclick=()=>togLine(cat.key);leg.appendChild(el)});
+  CATS.forEach(cat=>{
+    const on=!hid.has(cat.key);
+    const el=document.createElement('button');
+    el.className='leg-btn';
+    el.dataset.key=cat.key;
+    el.style.cssText=on?'background:'+cat.bg+';color:'+cat.hex+';border:1px solid '+cat.bdr:'background:transparent;color:var(--muted);border:1px solid var(--border)';
+    el.innerHTML='<span class="leg-s" style="background:'+(on?cat.hex:'var(--muted)')+'"></span>'+cat.icon+' '+cat.key;
+    el.onclick=()=>togLine(cat.key);
+    leg.appendChild(el);
+  });
 }
 
 /* ═══ HEATMAP ═══ */
