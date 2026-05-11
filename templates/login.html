@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Narranomics.</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f4f5f9;color:#1a1a2e;font-family:'DM Sans',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+/* Thin accent bar at top — matches narranomics.com */
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:3px;background:#E8375A;z-index:10}
+.logo-row{display:flex;align-items:center;gap:10px;margin-bottom:40px}
+.logo-icon{color:#E8375A}
+.logo-icon svg{width:26px;height:26px}
+.logo-text{font-size:1.3rem;font-weight:700;color:#E8375A;letter-spacing:-0.02em}
+.login-card{width:400px;padding:44px 40px;background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,0.04),0 8px 30px rgba(0,0,0,0.04)}
+h1{font-size:1.3rem;font-weight:700;color:#1a1a2e;letter-spacing:-0.03em;margin-bottom:4px}
+.sub{font-size:0.82rem;color:#8a8fa8;margin-bottom:32px}
+label{display:block;font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#8a8fa8;margin-bottom:6px}
+input{width:100%;padding:12px 16px;background:#f4f5f9;border:1px solid #e2e4eb;border-radius:10px;color:#1a1a2e;font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none;transition:border-color 0.2s;margin-bottom:20px}
+input:focus{border-color:#E8375A}
+input::placeholder{color:#b0b4c8}
+button{width:100%;padding:13px;background:#E8375A;border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;transition:background 0.2s;margin-top:4px}
+button:hover{background:#d42e4f}
+.err{background:rgba(232,55,90,0.06);border:1px solid rgba(232,55,90,0.15);color:#E8375A;padding:10px 14px;border-radius:8px;font-size:0.78rem;margin-bottom:20px}
+.foot{margin-top:48px;text-align:center;font-size:0.62rem;color:#b0b4c8;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="logo-row">
+  <div class="logo-icon"><svg viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="1" width="10" height="7" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><line x1="14" y1="8" x2="14" y2="12" stroke="currentColor" stroke-width="2"/><rect x="4" y="12" width="20" height="12" rx="2.5" stroke="currentColor" stroke-width="2" fill="none"/><line x1="14" y1="24" x2="14" y2="28" stroke="currentColor" stroke-width="2"/><rect x="9" y="28" width="10" height="7" rx="2" stroke="currentColor" stroke-width="2" fill="none"/></svg></div>
+  <div class="logo-text">Narranomics.</div>
+</div>
+<div class="login-card">
+  <h1>Sign in</h1>
+  <div class="sub">Macro Narrative Sentiment Dashboard</div>
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  <form method="POST">
+    <label>Username</label>
+    <input type="text" name="username" placeholder="Username" autocomplete="username" required autofocus>
+    <label>Password</label>
+    <input type="password" name="password" placeholder="Password" autocomplete="current-password" required>
+    <button type="submit">Continue</button>
+  </form>
+</div>
+<div class="foot">Narranomics Trading LLC · NFA ID 0557848<br>Data sourced from Dow Jones Newswire</div>
+</body>
+</html>
