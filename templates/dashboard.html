@@ -305,9 +305,7 @@ function aggregate(rows, mode){
 
 function renderChart(){
   let cut='0000-00-00';if(winD>0){const c=new Date();c.setDate(c.getDate()-winD);cut=c.toISOString().slice(0,10)}
-  // Pick aggregation: daily for <=90d, weekly for <=5y, monthly for all
-  const mode=winD>0&&winD<=90?'day':winD>0&&winD<=365*5?'week':'month';
-  if(winD===0) var aggMode='month'; else var aggMode=mode;
+  const aggMode=winD===0?'month':(winD<=90?'day':(winD<=365*5?'week':'month'));
   // Build per-category aggregated data
   const catAgg={};
   CATS.forEach(cat=>{
@@ -334,7 +332,7 @@ function renderChart(){
     plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#5c5f73',bodyColor:'#1a1a2e',borderColor:'#e8eaef',borderWidth:1,padding:14,titleFont:{family:'DM Sans'},bodyFont:{family:'JetBrains Mono',size:11},
       callbacks:{label:ctx=>{const v=ctx.raw;if(v==null)return null;const t=v>=60?'▲ Bullish':v<=39?'▼ Bearish':'→ Neutral';return` ${ctx.dataset.label}: ${v}  ${t}`}}}},
     scales:{
-      x:{grid:{color:'rgba(232,234,239,0.5)'},ticks:{color:'#9498ad',maxTicksLimit:long?16:20,font:{size:9,family:'JetBrains Mono'},maxRotation:45}},
+      x:{grid:{color:'rgba(232,234,239,0.5)'},ticks:{color:'#9498ad',maxTicksLimit:dates.length>200?16:20,font:{size:9,family:'JetBrains Mono'},maxRotation:45}},
       y:{min:0,max:100,grid:{color:'rgba(232,234,239,0.5)'},ticks:{color:'#9498ad',font:{size:10,family:'JetBrains Mono'}}}}
   }});
   const leg=document.getElementById('chart-legend');leg.innerHTML='';
