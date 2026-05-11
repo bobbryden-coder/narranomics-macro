@@ -279,15 +279,54 @@ function renderCards(){
 function setW(d,btn){winD=d;document.querySelectorAll('.wtabs .wt').forEach(t=>t.classList.remove('on'));btn.classList.add('on');renderChart()}
 function togLine(k){if(hid.has(k))hid.delete(k);else hid.add(k);renderChart();document.querySelectorAll('.leg-i').forEach(el=>{el.classList.toggle('off',hid.has(el.dataset.key))})}
 
+/* Aggregate daily rows into buckets: 'day','week','month' */
+function aggregate(rows, mode){
+  if(mode==='day') return rows;
+  const buckets={};
+  rows.forEach(r=>{
+    if(r.composite_score==null) return;
+    let key;
+    if(mode==='week'){
+      const d=new Date(r.date);const day=d.getDay();const mon=new Date(d);mon.setDate(d.getDate()-(day===0?6:day-1));
+      key=mon.toISOString().slice(0,10);
+    }else{
+      key=r.date.slice(0,7)+'-01'; // month
+    }
+    if(!buckets[key]) buckets[key]={date:key,scores:[],counts:[]};
+    buckets[key].scores.push(r.composite_score);
+    if(r.article_count) buckets[key].counts.push(r.article_count);
+  });
+  return Object.values(buckets).map(b=>({
+    date:b.date,
+    composite_score:Math.round(b.scores.reduce((a,c)=>a+c,0)/b.scores.length),
+    article_count:b.counts.reduce((a,c)=>a+c,0),
+  })).sort((a,b)=>a.date.localeCompare(b.date));
+}
+
 function renderChart(){
   let cut='0000-00-00';if(winD>0){const c=new Date();c.setDate(c.getDate()-winD);cut=c.toISOString().slice(0,10)}
-  const dates=[...new Set(allData.filter(r=>r.date>=cut).map(r=>r.date))].sort();
-  const ds=CATS.filter(c=>!hid.has(c.key)).map(cat=>{
-    const m={};allData.filter(r=>r.category===cat.key&&r.date>=cut).forEach(r=>{m[r.date]=r.composite_score});
-    return{label:cat.key,data:dates.map(d=>m[d]??null),borderColor:cat.hex,backgroundColor:cat.bg,fill:false,borderWidth:1.8,pointRadius:dates.length<=90?2.5:dates.length<=365?1:0,pointBackgroundColor:cat.hex,tension:0.3,spanGaps:true}
+  // Pick aggregation: daily for <=90d, weekly for <=5y, monthly for all
+  const mode=winD>0&&winD<=90?'day':winD>0&&winD<=365*5?'week':'month';
+  if(winD===0) var aggMode='month'; else var aggMode=mode;
+  // Build per-category aggregated data
+  const catAgg={};
+  CATS.forEach(cat=>{
+    const raw=allData.filter(r=>r.category===cat.key&&r.date>=cut);
+    catAgg[cat.key]=aggregate(raw, aggMode);
   });
-  const long=dates.length>400;
-  const labels=dates.map(d=>{const dt=new Date(d);return long?dt.toLocaleDateString('en-GB',{month:'short',year:'2-digit'}):dt.toLocaleDateString('en-GB',{day:'numeric',month:'short'})});
+  // Union of all dates across categories
+  const dateSet=new Set();
+  Object.values(catAgg).forEach(rows=>rows.forEach(r=>dateSet.add(r.date)));
+  const dates=[...dateSet].sort();
+  const ds=CATS.filter(c=>!hid.has(c.key)).map(cat=>{
+    const m={};catAgg[cat.key].forEach(r=>{m[r.date]=r.composite_score});
+    return{label:cat.key,data:dates.map(d=>m[d]??null),borderColor:cat.hex,backgroundColor:cat.bg,fill:false,borderWidth:aggMode==='day'?1.8:2,pointRadius:dates.length<=60?3:dates.length<=150?2:0,pointBackgroundColor:cat.hex,tension:0.35,spanGaps:true}
+  });
+  const labels=dates.map(d=>{const dt=new Date(d);
+    if(aggMode==='month') return dt.toLocaleDateString('en-GB',{month:'short',year:'2-digit'});
+    if(aggMode==='week') return dt.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    return dt.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  });
   const ctx=document.getElementById('trendChart').getContext('2d');
   if(chart)chart.destroy();
   chart=new Chart(ctx,{type:'line',data:{labels,datasets:ds},options:{

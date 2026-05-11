@@ -174,6 +174,85 @@ def api_macro_csv():
                     headers={'Content-Disposition': 'attachment; filename=narranomics_macro_sentiment.csv'})
 
 
+@app.route('/api/macro/diagnostics')
+@login_required
+def api_macro_diagnostics():
+    """Data coverage diagnostics — row counts, date ranges, gaps per category."""
+    if not SUPABASE_KEY:
+        return jsonify({'error': 'Not configured'}), 500
+
+    from collections import defaultdict
+
+    all_rows = []
+    offset = 0
+    batch = 1000
+    while True:
+        resp = http_requests.get(
+            f"{SUPABASE_URL}/rest/v1/dj_macro_daily_summary",
+            headers=_sb_headers(),
+            params={
+                'select': 'date,category,composite_score,article_count',
+                'order': 'date.asc,category.asc',
+                'limit': batch,
+                'offset': offset,
+            },
+            timeout=20,
+        )
+        if resp.status_code != 200:
+            return jsonify({'error': f'Database error {resp.status_code}'}), 500
+        rows = resp.json()
+        if not rows:
+            break
+        all_rows.extend(rows)
+        if len(rows) < batch:
+            break
+        offset += batch
+
+    # Per-category stats
+    by_cat = defaultdict(list)
+    for r in all_rows:
+        by_cat[r['category']].append(r)
+
+    diagnostics = {}
+    for cat, rows in by_cat.items():
+        dates = sorted(set(r['date'] for r in rows))
+        scores = [r['composite_score'] for r in rows if r.get('composite_score') is not None]
+        articles = [r['article_count'] for r in rows if r.get('article_count') is not None]
+
+        # Find gaps > 5 business days
+        gaps = []
+        for i in range(1, len(dates)):
+            d1 = datetime.strptime(dates[i-1], '%Y-%m-%d')
+            d2 = datetime.strptime(dates[i], '%Y-%m-%d')
+            delta = (d2 - d1).days
+            if delta > 7:  # more than a week gap
+                gaps.append({'from': dates[i-1], 'to': dates[i], 'days': delta})
+
+        # Year-by-year counts
+        yearly = defaultdict(int)
+        for d in dates:
+            yearly[d[:4]] += 1
+
+        diagnostics[cat] = {
+            'total_rows': len(rows),
+            'date_range': {'first': dates[0] if dates else None, 'last': dates[-1] if dates else None},
+            'score_stats': {
+                'min': min(scores) if scores else None,
+                'max': max(scores) if scores else None,
+                'avg': round(sum(scores)/len(scores), 1) if scores else None,
+            },
+            'avg_articles_per_day': round(sum(articles)/len(articles), 1) if articles else None,
+            'gaps_over_7_days': gaps[:20],  # cap at 20
+            'gap_count': len(gaps),
+            'yearly_counts': dict(sorted(yearly.items())),
+        }
+
+    return jsonify({
+        'total_rows': len(all_rows),
+        'categories': diagnostics,
+    })
+
+
 # ── Run ──────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
