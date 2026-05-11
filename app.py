@@ -194,6 +194,64 @@ def api_macro_csv():
                     headers={'Content-Disposition': 'attachment; filename=narranomics_risk.csv'})
 
 
+@app.route('/api/macro/risk/csv')
+@login_required
+def api_macro_risk_csv():
+    """Export Risk score (average of all categories) for the past year. 3 columns only."""
+    import csv, io
+    from collections import defaultdict
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=365)).strftime('%Y-%m-%d')
+
+    all_rows = []
+    offset = 0
+    batch = 1000
+    while True:
+        resp = http_requests.get(
+            f"{SUPABASE_URL}/rest/v1/dj_macro_daily_summary",
+            headers=_sb_headers(),
+            params={
+                'select': 'date,composite_score,article_count',
+                'date': f'gte.{cutoff}',
+                'order': 'date.asc',
+                'limit': batch,
+                'offset': offset,
+            },
+            timeout=20,
+        )
+        if resp.status_code != 200:
+            break
+        rows = resp.json()
+        if not rows:
+            break
+        all_rows.extend(rows)
+        if len(rows) < batch:
+            break
+        offset += batch
+
+    # Exclude weekends
+    all_rows = [r for r in all_rows
+                if datetime.strptime(r['date'], '%Y-%m-%d').weekday() < 5]
+
+    # Compute daily Risk = average score, sum articles
+    by_date = defaultdict(lambda: {'scores': [], 'articles': 0})
+    for r in all_rows:
+        if r.get('composite_score') is not None:
+            by_date[r['date']]['scores'].append(r['composite_score'])
+            by_date[r['date']]['articles'] += (r.get('article_count') or 0)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Date', 'Risk', 'Articles'])
+    for date in sorted(by_date.keys()):
+        d = by_date[date]
+        risk = round(sum(d['scores']) / len(d['scores']))
+        writer.writerow([date, risk, d['articles']])
+
+    return Response(output.getvalue(), mimetype='text/csv',
+                    headers={'Content-Disposition': 'attachment; filename=narranomics_risk_1y.csv'})
+
+
 @app.route('/api/macro/diagnostics')
 @login_required
 def api_macro_diagnostics():
