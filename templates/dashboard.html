@@ -59,7 +59,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:3px;backgroun
 .card-h{font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--dim);margin-bottom:16px}
 
 /* ═══ CATEGORY CARDS ═══ */
-.cat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
 .cat-card{position:relative;overflow:hidden}
 .cat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
 .cat-card[data-t="bullish"]::before{background:linear-gradient(90deg,var(--green),transparent)}
@@ -164,7 +164,6 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:3px;backgroun
     <div class="card" style="min-height:180px"><div class="shim" style="height:100%;min-height:140px"></div></div>
     <div class="card" style="min-height:180px"><div class="shim" style="height:100%;min-height:140px"></div></div>
     <div class="card" style="min-height:180px"><div class="shim" style="height:100%;min-height:140px"></div></div>
-    <div class="card" style="min-height:180px"><div class="shim" style="height:100%;min-height:140px"></div></div>
   </div>
 
   <!-- TREND CHART -->
@@ -234,8 +233,9 @@ const CATS=[
   {key:'Central Banks', icon:'🏛',color:'var(--c1)',hex:'#2563eb',bg:'var(--c1-bg)',bdr:'var(--c1-bdr)'},
   {key:'US Economic',   icon:'🇺🇸',color:'var(--c2)',hex:'#059669',bg:'var(--c2-bg)',bdr:'var(--c2-bdr)'},
   {key:'Equities',      icon:'📈',color:'var(--c3)',hex:'#d97706',bg:'var(--c3-bg)',bdr:'var(--c3-bdr)'},
-  {key:'Key Regions',   icon:'🌍',color:'var(--c4)',hex:'#7c3aed',bg:'var(--c4-bg)',bdr:'var(--c4-bdr)'},
+  {key:'Key Regions',   icon:'🌍',color:'var(--c4)',hex:'#7c3aed',bg:'var(--c4-bg)',bdr:'var(--c4-bdr)',vis:false},
 ];
+const VISIBLE_CATS=CATS.filter(c=>c.vis!==false);
 let allData=[],chart=null,winD=365,hmCat='all',tCat='all',tN=60,hid=new Set();
 
 function tone(s){return s==null?'nodata':s>=60?'bullish':s<=39?'bearish':'neutral'}
@@ -284,7 +284,7 @@ async function load(){
 /* ═══ CARDS ═══ */
 function renderCards(){
   const box=document.getElementById('cat-cards');box.innerHTML='';
-  CATS.forEach((cat,i)=>{
+  VISIBLE_CATS.forEach((cat,i)=>{
     const rows=allData.filter(r=>r.category===cat.key);
     const last=rows.length?rows[rows.length-1]:null;
     const sc=last?last.composite_score:null;const t=tone(sc);
@@ -335,7 +335,7 @@ function renderChart(){
   const aggMode=winD===0?'month':(winD<=90?'day':(winD<=365*5?'week':'month'));
   // Build per-category aggregated data
   const catAgg={};
-  CATS.forEach(cat=>{
+  VISIBLE_CATS.forEach(cat=>{
     const raw=allData.filter(r=>r.category===cat.key&&r.date>=cut);
     catAgg[cat.key]=aggregate(raw, aggMode);
   });
@@ -343,7 +343,7 @@ function renderChart(){
   const dateSet=new Set();
   Object.values(catAgg).forEach(rows=>rows.forEach(r=>dateSet.add(r.date)));
   const dates=[...dateSet].sort();
-  const ds=CATS.filter(c=>!hid.has(c.key)).map(cat=>{
+  const ds=VISIBLE_CATS.filter(c=>!hid.has(c.key)).map(cat=>{
     const m={};catAgg[cat.key].forEach(r=>{m[r.date]=r.composite_score});
     const isRisk=cat.isRisk;
     return{label:cat.key,data:dates.map(d=>m[d]??null),borderColor:cat.hex,backgroundColor:cat.bg,fill:false,borderWidth:isRisk?3:(aggMode==='day'?1.8:2),borderDash:isRisk?[]:[],pointRadius:isRisk?(dates.length<=60?4:dates.length<=150?3:1.5):(dates.length<=60?3:dates.length<=150?2:0),pointBackgroundColor:cat.hex,tension:0.35,spanGaps:true,order:isRisk?0:1}
@@ -364,7 +364,7 @@ function renderChart(){
       y:{min:0,max:100,grid:{color:'rgba(232,234,239,0.5)'},ticks:{color:'#9498ad',font:{size:10,family:'JetBrains Mono'}}}}
   }});
   const leg=document.getElementById('chart-legend');leg.innerHTML='';
-  CATS.forEach(cat=>{
+  VISIBLE_CATS.forEach(cat=>{
     const on=!hid.has(cat.key);
     const el=document.createElement('button');
     el.className='leg-btn';
@@ -402,7 +402,7 @@ function renderHM(){
 
 /* ═══ TABS ═══ */
 function buildTabs(){
-  const opts=['all',...CATS.map(c=>c.key)];
+  const opts=['all',...VISIBLE_CATS.map(c=>c.key)];
   const hm=document.getElementById('hm-tabs');hm.innerHTML='';
   opts.forEach(c=>{const b=document.createElement('button');b.className=`ftb${c===hmCat?' on':''}`;b.textContent=c==='all'?'All (avg)':cc(c).icon+' '+c;b.onclick=()=>setHC(c,b);hm.appendChild(b)});
   const tb=document.getElementById('tbl-tabs');tb.innerHTML='';
