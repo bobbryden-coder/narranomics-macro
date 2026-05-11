@@ -162,6 +162,26 @@ def api_macro_csv():
     all_rows = [r for r in all_rows
                 if datetime.strptime(r['date'], '%Y-%m-%d').weekday() < 5]
 
+    # Compute Risk (average of all categories per date)
+    from collections import defaultdict
+    by_date = defaultdict(list)
+    for r in all_rows:
+        if r.get('composite_score') is not None:
+            by_date[r['date']].append(r)
+    risk_rows = []
+    for date, rows in by_date.items():
+        scores = [r['composite_score'] for r in rows]
+        counts = [r.get('article_count', 0) or 0 for r in rows]
+        risk_rows.append({
+            'date': date,
+            'category': 'Risk',
+            'composite_score': round(sum(scores) / len(scores)),
+            'article_count': sum(counts),
+            'summary_text': 'Average of all macro categories',
+        })
+    all_rows.extend(risk_rows)
+    all_rows.sort(key=lambda r: (r['date'], r['category']), reverse=True)
+
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Date', 'Category', 'Composite Score', 'Article Count', 'Summary'])
@@ -171,7 +191,7 @@ def api_macro_csv():
                          r.get('summary_text','')])
 
     return Response(output.getvalue(), mimetype='text/csv',
-                    headers={'Content-Disposition': 'attachment; filename=narranomics_macro_sentiment.csv'})
+                    headers={'Content-Disposition': 'attachment; filename=narranomics_risk.csv'})
 
 
 @app.route('/api/macro/diagnostics')
